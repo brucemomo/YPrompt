@@ -99,7 +99,12 @@ class VersionService:
             # 2. 生成新版本号
             change_type = data.get('change_type', 'patch')
             current_version = current_prompt.get('current_version', '1.0.0')
-            new_version = self.generate_next_version(current_version, change_type)
+            force_version_number = data.get('force_version_number')
+            
+            if force_version_number:
+                new_version = force_version_number
+            else:
+                new_version = self.generate_next_version(current_version, change_type)
             
             # 3. 准备版本数据（完整快照）
             version_data = {
@@ -583,4 +588,3 @@ class VersionService:
         except Exception as e:
             logger.error(f'❌ 删除版本失败: {e}')
             raise
-

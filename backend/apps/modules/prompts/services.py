@@ -101,10 +101,11 @@ class PromptService:
                     version_service = VersionService(self.db)
                     
                     version_data = {
-                        'change_type': 'minor',
+                        'change_type': 'initial',
                         'change_summary': change_summary or '初始版本',
                         'change_log': '创建提示词',
-                        'version_tag': 'initial'
+                        'version_tag': 'initial',
+                        'force_version_number': '1.0.0'
                     }
                     
                     # create_version内部会自动生成版本号
@@ -567,4 +568,3 @@ class PromptService:
         except Exception as e:
             logger.error(f'❌ 更新标签统计失败: {e}')
             # 不抛出异常,因为这不是关键操作
-
