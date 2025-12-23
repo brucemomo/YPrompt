@@ -73,6 +73,62 @@
           </p>
         </div>
 
+        <!-- 用户提示词扩展字段 -->
+        <template v-if="formData.promptType === 'user'">
+          <!-- 系统提示词 -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              系统提示词（可选）
+            </label>
+            <textarea
+              v-model="formData.systemPrompt"
+              placeholder="输入AI助手的系统提示词（可选）"
+              rows="4"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none font-mono text-sm"
+              maxlength="5000"
+            ></textarea>
+            <p class="mt-1 text-xs text-gray-500">{{ formData.systemPrompt.length }}/5000 字符</p>
+          </div>
+
+          <!-- 对话上下文 -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              对话上下文
+              <span class="text-xs text-gray-500 ml-2">(JSON格式，可复用上下文)</span>
+            </label>
+            <textarea
+              v-model="formData.conversationHistory"
+              placeholder='请输入对话历史，示例：[{"role":"user","content":"..."},{"role":"assistant","content":"..."}]'
+              rows="6"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none font-mono text-xs"
+              :class="{ 'border-red-500': conversationFormatError }"
+            ></textarea>
+            <p v-if="conversationFormatError" class="mt-1 text-xs text-red-600">
+              ⚠️ JSON格式错误：{{ conversationFormatError }}
+            </p>
+            <p v-else class="mt-1 text-xs text-gray-500">
+              {{ formData.conversationHistory.length }}/10000 字符
+              <button 
+                v-if="formData.conversationHistory"
+                @click="formatConversationJson"
+                class="ml-2 text-blue-600 hover:text-blue-700 underline"
+              >
+                格式化
+              </button>
+              <button 
+                @click="showConversationHelp = !showConversationHelp"
+                class="ml-2 text-blue-600 hover:text-blue-700 underline"
+              >
+                {{ showConversationHelp ? '隐藏' : '查看' }}示例
+              </button>
+            </p>
+            <div v-if="showConversationHelp" class="mt-2 p-3 bg-blue-50 border border-blue-200 rounded text-xs">
+              <p class="font-semibold mb-1">标准格式示例：</p>
+              <pre class="bg-white p-2 rounded overflow-x-auto whitespace-pre-wrap">{{ conversationExample }}</pre>
+            </div>
+          </div>
+        </template>
+
         <!-- 标签 -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -183,6 +239,8 @@ const emit = defineEmits<{
     isPublic: boolean
     promptType: string
     content?: string
+    systemPrompt?: string
+    conversationHistory?: string
   }]
   cancel: []
 }>()
@@ -193,10 +251,24 @@ const formData = ref({
   tags: [] as string[],
   isPublic: false,
   promptType: 'system',
-  content: ''
+  content: '',
+  systemPrompt: '',
+  conversationHistory: ''
 })
 
 const newTag = ref('')
+const conversationFormatError = ref('')
+const showConversationHelp = ref(false)
+const conversationExample = `[
+  {
+    "role": "user",
+    "content": "我牙疼"
+  },
+  {
+    "role": "assistant",
+    "content": "牙疼多久了？有什么特别的症状吗？"
+  }
+]`
 
 /**
  * 从提示词内容中提取标题
@@ -294,6 +366,64 @@ const extractTitleFromContent = (content: string): string => {
   return autoTitle
 }
 
+const validateConversationJson = (jsonStr: string): string => {
+  if (!jsonStr.trim()) {
+    return ''
+  }
+
+  try {
+    const parsed = JSON.parse(jsonStr)
+    if (!Array.isArray(parsed)) {
+      return '必须是数组格式'
+    }
+    for (let i = 0; i < parsed.length; i++) {
+      const item = parsed[i] || {}
+      if (!item.role || !item.content) {
+        return `第${i + 1}条消息缺少role或content字段`
+      }
+      if (!['user', 'assistant', 'system'].includes(item.role)) {
+        return `第${i + 1}条消息的role必须是user、assistant或system`
+      }
+    }
+    return ''
+  } catch (error: any) {
+    return error?.message || 'JSON格式错误'
+  }
+}
+
+watch(
+  () => formData.value.conversationHistory,
+  (newValue) => {
+    if (formData.value.promptType !== 'user') {
+      conversationFormatError.value = ''
+      return
+    }
+    conversationFormatError.value = validateConversationJson(newValue)
+  }
+)
+
+watch(
+  () => formData.value.promptType,
+  (newType) => {
+    if (newType !== 'user') {
+      conversationFormatError.value = ''
+    } else if (formData.value.conversationHistory) {
+      conversationFormatError.value = validateConversationJson(formData.value.conversationHistory)
+    }
+  }
+)
+
+const formatConversationJson = () => {
+  if (!formData.value.conversationHistory.trim()) return
+  try {
+    const parsed = JSON.parse(formData.value.conversationHistory)
+    formData.value.conversationHistory = JSON.stringify(parsed, null, 2)
+    conversationFormatError.value = ''
+  } catch {
+    conversationFormatError.value = 'JSON格式错误，无法格式化'
+  }
+}
+
 // 监听对话框打开，重置表单
 watch(() => props.isOpen, (isOpen) => {
   if (isOpen) {
@@ -310,6 +440,10 @@ watch(() => props.isOpen, (isOpen) => {
     formData.value.isPublic = false
     formData.value.promptType = 'system'
     formData.value.content = ''
+    formData.value.systemPrompt = ''
+    formData.value.conversationHistory = ''
+    showConversationHelp.value = false
+    conversationFormatError.value = ''
   }
 })
 
@@ -332,13 +466,19 @@ const handleSave = () => {
     alert('请输入提示词内容')
     return
   }
+  if (formData.value.promptType === 'user' && conversationFormatError.value) {
+    alert('请修正对话上下文JSON格式')
+    return
+  }
   emit('save', {
     title: formData.value.title.trim(),
     description: formData.value.description.trim(),
     tags: formData.value.tags,
     isPublic: formData.value.isPublic,
     promptType: formData.value.promptType,
-    content: formData.value.content.trim()
+    content: formData.value.content.trim(),
+    systemPrompt: formData.value.promptType === 'user' ? formData.value.systemPrompt.trim() : '',
+    conversationHistory: formData.value.promptType === 'user' ? formData.value.conversationHistory.trim() : ''
   })
 }
 

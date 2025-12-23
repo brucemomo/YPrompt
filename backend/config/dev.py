@@ -13,8 +13,8 @@ class Config:
     SQLITE_DB_PATH = '../data/yprompt.db'
     
     # MySQL配置 (如果使用MySQL，将DB_TYPE改为'mysql'并配置以下参数)
-    DB_HOST = 'localhost'
-    DB_USER = 'root'
+    DB_HOST = ''
+    DB_USER = ''
     DB_PASS = ''
     DB_NAME = 'yprompt'
     DB_PORT = 3306
@@ -44,15 +44,15 @@ class Config:
     # ==========================================
     # 默认管理员账号配置
     # ==========================================
-    DEFAULT_ADMIN_USERNAME = ''
-    DEFAULT_ADMIN_PASSWORD = ''
+    DEFAULT_ADMIN_USERNAME = 'admin'
+    DEFAULT_ADMIN_PASSWORD = 'admin123'
     DEFAULT_ADMIN_NAME = '管理员'
     
     # ==========================================
     # 注册功能配置
     # ==========================================
     # 是否允许本地用户注册（Linux.do OAuth不受此影响）
-    REGISTRATION_ENABLED = False  # True=允许注册, False=禁止注册
+    REGISTRATION_ENABLED = True  # True=允许注册, False=禁止注册
     
     # ==========================================
     # 服务器配置

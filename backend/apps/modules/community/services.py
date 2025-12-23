@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """社区功能业务逻辑"""
 import json
+from datetime import datetime
 from typing import Dict, Any, List, Optional
 from sanic.log import logger
-from datetime import datetime
 
 
 class CommunityService:
@@ -64,7 +64,7 @@ class CommunityService:
             # 查询当前用户的点赞状态
             items = []
             for row in rows:
-                item = dict(row)
+                item = self._serialize_row(row)
                 item['is_liked'] = False
                 
                 if current_user_id:
@@ -115,7 +115,7 @@ class CommunityService:
                 like_row = await self.db.get(like_sql, [prompt_id, current_user_id])
                 prompt['is_liked'] = bool(like_row)
             
-            return dict(prompt)
+            return self._serialize_row(prompt)
         except Exception as exc:
             logger.error(f'❌ 获取提示词详情失败: {exc}')
             raise
@@ -226,7 +226,7 @@ class CommunityService:
                 'total': total,
                 'page': page,
                 'limit': limit,
-                'items': [dict(row) for row in rows]
+                'items': [self._serialize_row(row) for row in rows]
             }
         except Exception as exc:
             logger.error(f'❌ 获取评论列表失败: {exc}')
@@ -236,13 +236,13 @@ class CommunityService:
         """创建评论"""
         try:
             # 插入评论
-            insert_sql = 'INSERT INTO prompt_comments (prompt_id, user_id, content, parent_id) VALUES (?, ?, ?, ?)'
-            await self.db.execute(insert_sql, [prompt_id, user_id, content, parent_id])
-            
-            # SQLite 获取最后插入的ID
-            last_id_sql = 'SELECT last_insert_rowid() as id'
-            result = await self.db.get(last_id_sql)
-            comment_id = result['id'] if result else 0
+            fields = {
+                'prompt_id': prompt_id,
+                'user_id': user_id,
+                'content': content,
+                'parent_id': parent_id
+            }
+            comment_id = await self.db.table_insert('prompt_comments', fields)
             
             # 增加评论计数
             update_sql = 'UPDATE prompts SET comment_count = comment_count + 1 WHERE id = ?'
@@ -368,7 +368,7 @@ class CommunityService:
             params.append(limit)
             
             rows = await self.db.query(sql, params)
-            return [dict(row) for row in rows]
+            return [self._serialize_row(row) for row in rows]
         except Exception as exc:
             logger.error(f'❌ 获取作者其他提示词失败: {exc}')
             raise
@@ -379,19 +379,56 @@ class CommunityService:
             sql = """
                 SELECT 
                     ps.share_code, ps.title, ps.view_count, ps.create_time,
+                    ps.access_mode, ps.is_permanent, ps.expires_at,
                     u.name as creator_name, u.avatar as creator_avatar
                 FROM playground_shares ps
                 LEFT JOIN users u ON ps.user_id = u.id
                 WHERE ps.prompt_id = ? 
                   AND ps.is_active = 1 
                   AND ps.access_mode = 'public'
-                  AND ps.password_hash IS NULL
-                  AND (ps.is_permanent = 1 OR ps.expires_at > datetime('now'))
+                  AND (ps.is_permanent = 1 OR ps.expires_at > CURRENT_TIMESTAMP)
                 ORDER BY ps.create_time DESC
                 LIMIT ?
             """
             rows = await self.db.query(sql, [prompt_id, limit])
-            return [dict(row) for row in rows]
+            shares = [self._serialize_row(row) for row in rows]
+
+            remaining = max(0, limit - len(shares))
+            if remaining > 0:
+                legacy_sql = """
+                    SELECT 
+                        s.share_code,
+                        p.title AS prompt_title,
+                        s.view_count,
+                        s.create_time,
+                        s.expire_time,
+                        u.name AS creator_name,
+                        u.avatar AS creator_avatar
+                    FROM prompt_shares s
+                    LEFT JOIN prompts p ON s.prompt_id = p.id
+                    LEFT JOIN users u ON p.user_id = u.id
+                    WHERE s.prompt_id = ?
+                    ORDER BY s.create_time DESC
+                    LIMIT ?
+                """
+                legacy_rows = await self.db.query(legacy_sql, [prompt_id, remaining])
+                for row in legacy_rows:
+                    serialized = self._serialize_row(row)
+                    share_code = serialized.get('share_code')
+                    legacy_title = serialized.get('prompt_title') or (share_code and f"分享 {share_code}") or '历史分享'
+                    shares.append({
+                        'share_code': serialized.get('share_code'),
+                        'title': legacy_title,
+                        'view_count': serialized.get('view_count', 0),
+                        'create_time': serialized.get('create_time'),
+                        'creator_name': serialized.get('creator_name'),
+                        'creator_avatar': serialized.get('creator_avatar'),
+                        'access_mode': 'public',
+                        'is_permanent': serialized.get('expire_time') is None,
+                        'expires_at': serialized.get('expire_time'),
+                        'has_password': False
+                    })
+            return shares
         except Exception as exc:
             logger.error(f'❌ 获取相关操练场快照失败: {exc}')
             raise
@@ -399,14 +436,27 @@ class CommunityService:
     async def record_visit(self, prompt_id: int, user_id: int):
         """记录访问足迹"""
         try:
-            # 使用 INSERT OR REPLACE 更新访问时间
-            sql = '''
-                INSERT INTO prompt_visits (prompt_id, user_id, visit_time)
-                VALUES (?, ?, datetime('now'))
-                ON CONFLICT(prompt_id, user_id) 
-                DO UPDATE SET visit_time = datetime('now')
-            '''
-            await self.db.execute(sql, [prompt_id, user_id])
+            existing = await self.db.get(
+                "SELECT id FROM prompt_visits WHERE prompt_id = ? AND user_id = ?",
+                [prompt_id, user_id]
+            )
+            if existing:
+                await self.db.execute(
+                    "UPDATE prompt_visits SET visit_time = CURRENT_TIMESTAMP WHERE id = ?",
+                    [existing['id']]
+                )
+            else:
+                try:
+                    await self.db.execute(
+                        "INSERT INTO prompt_visits (prompt_id, user_id, visit_time) VALUES (?, ?, CURRENT_TIMESTAMP)",
+                        [prompt_id, user_id]
+                    )
+                except Exception:
+                    # 处理并发情况下的唯一约束冲突
+                    await self.db.execute(
+                        "UPDATE prompt_visits SET visit_time = CURRENT_TIMESTAMP WHERE prompt_id = ? AND user_id = ?",
+                        [prompt_id, user_id]
+                    )
         except Exception as exc:
             logger.error(f'❌ 记录访问足迹失败: {exc}')
     
@@ -424,7 +474,19 @@ class CommunityService:
                 LIMIT ?
             """
             rows = await self.db.query(sql, [prompt_id, limit])
-            return [dict(row) for row in rows]
+            return [self._serialize_row(row) for row in rows]
         except Exception as exc:
             logger.error(f'❌ 获取访问者列表失败: {exc}')
             raise
+
+    @staticmethod
+    def _serialize_row(row: Dict[str, Any]) -> Dict[str, Any]:
+        """将数据库记录转换为JSON-friendly字典"""
+        serialized: Dict[str, Any] = {}
+        data = dict(row)
+        for key, value in data.items():
+            if isinstance(value, datetime):
+                serialized[key] = value.isoformat(sep=' ', timespec='seconds')
+            else:
+                serialized[key] = value
+        return serialized

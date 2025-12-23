@@ -13,7 +13,7 @@ class TagService:
         初始化标签服务
         
         Args:
-            db: 数据库连接对象(ezmysql ConnectionAsync)
+            db: 数据库连接对象（统一SQL适配器）
         """
         self.db = db
     
@@ -157,4 +157,3 @@ class TagService:
         except Exception as e:
             logger.error(f'❌ 查询热门标签失败: {e}')
             raise
-

@@ -21,7 +21,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRouter, useRoute, type LocationQueryValue } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
 
 const router = useRouter()
@@ -33,9 +33,11 @@ const error = ref('')
 const provider = ref<'linux_do' | 'feishu'>('linux_do')
 const providerLabel = computed(() => provider.value === 'feishu' ? '飞书' : 'Linux.do')
 
-const getQueryValue = (value: string | string[] | undefined) => {
-  if (Array.isArray(value)) return value[0]
-  return value
+const getQueryValue = (value: LocationQueryValue | LocationQueryValue[] | undefined): string | undefined => {
+  if (Array.isArray(value)) {
+    return typeof value[0] === 'string' ? value[0] : undefined
+  }
+  return typeof value === 'string' ? value : undefined
 }
 
 const resolveProvider = () => {
@@ -57,7 +59,7 @@ const processCallback = async () => {
       return
     }
 
-    const code = route.query.code as string
+    const code = getQueryValue(route.query.code)
 
     if (!code) {
       error.value = '未获取到授权码，请重新登录'

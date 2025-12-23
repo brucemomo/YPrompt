@@ -179,6 +179,8 @@ const handleCreatePrompt = async (formData: {
   isPublic: boolean
   promptType: string
   content?: string
+  systemPrompt?: string
+  conversationHistory?: string
 }) => {
   try {
     isSaving.value = true
@@ -187,22 +189,29 @@ const handleCreatePrompt = async (formData: {
       throw new Error('请先登录')
     }
 
+    const payload: Record<string, any> = {
+      title: formData.title,
+      description: formData.description,
+      final_prompt: formData.content || newPromptContent.value,
+      language: 'zh',
+      format: 'markdown',
+      prompt_type: formData.promptType,
+      tags: formData.tags,
+      is_public: formData.isPublic ? 1 : 0
+    }
+
+    if (formData.promptType === 'user') {
+      payload.system_prompt = formData.systemPrompt || ''
+      payload.conversation_history = formData.conversationHistory || ''
+    }
+
     const response = await fetch(`${API_BASE_URL}/api/prompts/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({
-        title: formData.title,
-        description: formData.description,
-        final_prompt: formData.content || newPromptContent.value,
-        language: 'zh',
-        format: 'markdown',
-        prompt_type: formData.promptType,
-        tags: formData.tags,
-        is_public: formData.isPublic ? 1 : 0
-      })
+      body: JSON.stringify(payload)
     })
 
     const result = await response.json()

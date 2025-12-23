@@ -118,16 +118,17 @@ class PlaygroundShareService:
         rows = await self.db.query(query, [user_id, limit, offset])
         items = []
         for row in rows:
+            normalized = self._serialize_row(row)
             items.append({
-                'share_code': row.get('share_code'),
-                'title': row.get('title'),
-                'access_mode': row.get('access_mode'),
-                'is_permanent': bool(row.get('is_permanent')),
-                'expires_at': row.get('expires_at'),
-                'view_count': row.get('view_count', 0),
-                'has_password': bool(row.get('password_hash')),
-                'is_active': bool(row.get('is_active', 1)),
-                'create_time': row.get('create_time')
+                'share_code': normalized.get('share_code'),
+                'title': normalized.get('title'),
+                'access_mode': normalized.get('access_mode'),
+                'is_permanent': bool(normalized.get('is_permanent')),
+                'expires_at': normalized.get('expires_at'),
+                'view_count': normalized.get('view_count', 0),
+                'has_password': bool(normalized.get('password_hash')),
+                'is_active': bool(normalized.get('is_active', 1)),
+                'create_time': normalized.get('create_time')
             })
         return {
             'total': total,
@@ -142,7 +143,8 @@ class PlaygroundShareService:
             "FROM playground_shares ps JOIN users u ON ps.user_id = u.id "
             "WHERE ps.share_code = ?"
         )
-        return await self.db.get(sql, [share_code])
+        result = await self.db.get(sql, [share_code])
+        return self._serialize_row(result) if result else None
 
     async def record_view(self, share_id: int):
         now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -236,3 +238,15 @@ class PlaygroundShareService:
             return datetime.datetime.fromisoformat(value.replace('T', ' '))
         except Exception as exc:
             raise ValueError('到期时间格式不正确') from exc
+
+    @staticmethod
+    def _serialize_row(row: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+        if not row:
+            return {}
+        serialized: Dict[str, Any] = {}
+        for key, value in dict(row).items():
+            if isinstance(value, datetime.datetime):
+                serialized[key] = value.isoformat(sep=' ', timespec='seconds')
+            else:
+                serialized[key] = value
+        return serialized
