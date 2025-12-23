@@ -1,6 +1,6 @@
 -- ==========================================
 -- YPrompt SQLite 数据库初始化脚本
--- 支持双认证: Linux.do OAuth + 本地用户名密码
+-- 支持多认证: Linux.do OAuth + 飞书 OAuth + 本地用户名密码
 -- ==========================================
 
 -- 用户表
@@ -10,6 +10,10 @@ CREATE TABLE IF NOT EXISTS users (
   -- Linux.do OAuth字段
   linux_do_id VARCHAR(64) DEFAULT NULL,
   linux_do_username VARCHAR(100) DEFAULT NULL,
+  
+  -- 飞书 OAuth字段
+  feishu_open_id VARCHAR(64) DEFAULT NULL,
+  feishu_union_id VARCHAR(64) DEFAULT NULL,
   
   -- 本地认证字段
   username VARCHAR(50) DEFAULT NULL,
@@ -29,6 +33,7 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS uk_linux_do_id ON users(linux_do_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_feishu_open_id ON users(feishu_open_id);
 CREATE UNIQUE INDEX IF NOT EXISTS uk_username ON users(username);
 CREATE INDEX IF NOT EXISTS idx_auth_type ON users(auth_type);
 CREATE INDEX IF NOT EXISTS idx_is_active ON users(is_active);

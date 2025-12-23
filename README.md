@@ -8,7 +8,7 @@ AI通过对话挖掘用户需求，并自动生成专业的提示词，支持系
 - 系统/用户(支持构建对话上下文)优化、效果对比
 - 提示词版本管理与历史回滚
 - 操练场支持多种输出类型即时渲染，效果看得见
-- 双认证：本地用户名密码 、 `Linux.do OAuth`
+- 多认证：Linux.do OAuth、飞书 OAuth、本地用户名密码
 - 双数据库：SQLite（默认）+ MySQL（可选）
 - 响应式设计（桌面/移动端）
 
@@ -69,6 +69,9 @@ docker run -d \
   -e LINUX_DO_CLIENT_ID=your_client_id \
   -e LINUX_DO_CLIENT_SECRET=your_client_secret \
   -e LINUX_DO_REDIRECT_URI=https://yourdomain.com/auth/callback \
+  -e FEISHU_APP_ID=your_feishu_app_id \
+  -e FEISHU_APP_SECRET=your_feishu_app_secret \
+  -e FEISHU_REDIRECT_URI=https://yourdomain.com/auth/callback \
   -e REGISTRATION_ENABLED=false \
   ghcr.io/fish2018/yprompt:latest
 ```
@@ -96,6 +99,9 @@ services:
       - LINUX_DO_CLIENT_ID=your_client_id
       - LINUX_DO_CLIENT_SECRET=your_client_secret
       - LINUX_DO_REDIRECT_URI=https://yourdomain.com/auth/callback
+      - FEISHU_APP_ID=your_feishu_app_id
+      - FEISHU_APP_SECRET=your_feishu_app_secret
+      - FEISHU_REDIRECT_URI=https://yourdomain.com/auth/callback
       - REGISTRATION_ENABLED=false
 ```
 
@@ -141,6 +147,16 @@ docker-compose up -d
 
 申请地址：https://connect.linux.do/my/preferences/apps
 
+### `飞书 OAuth`配置（可选）
+
+| 变量 | 说明 | 示例 |
+|------|------|------|
+| `FEISHU_APP_ID` | 飞书应用ID | `cli_xxxxx` |
+| `FEISHU_APP_SECRET` | 飞书应用Secret | `xxxxxxxx` |
+| `FEISHU_REDIRECT_URI` | OAuth回调地址 | `https://yourdomain.com/auth/callback` |
+
+申请地址：https://open.feishu.cn/
+
 ### 本地认证配置
 
 | 变量 | 默认值 | 说明 |
@@ -148,6 +164,8 @@ docker-compose up -d
 | `ADMIN_USERNAME` | `admin` | 默认管理员用户名 |
 | `ADMIN_PASSWORD` | `admin123` | 默认管理员密码 |
 | `REGISTRATION_ENABLED` | `false` | 是否允许用户自助注册（`true/false`） |
+
+> ⚠️ 当 `DEFAULT_ADMIN_USERNAME`（或 `ADMIN_USERNAME` 环境变量）为空且未开放注册时，系统不会显示账号密码登录入口，仅保留 OAuth 登录方式。
 
 ### 健康检查配置
 

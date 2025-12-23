@@ -44,6 +44,7 @@
               提示词规则
             </button>
             <a
+              v-if="showGithubLink"
               href="https://github.com/fish2018"
               target="_blank"
               rel="noopener noreferrer"
@@ -160,9 +161,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { X } from 'lucide-vue-next'
 import { useSettingsStore } from '@/stores/settingsStore'
+import { useAuthStore } from '@/stores/authStore'
 
 import SettingsButton from './components/SettingsButton.vue'
 import ProvidersTab from './components/tabs/ProvidersTab.vue'
@@ -178,12 +180,14 @@ import { useModelTesting } from './composables/useModelTesting'
 import { usePromptRules } from './composables/usePromptRules'
 
 const settingsStore = useSettingsStore()
+const authStore = useAuthStore()
 const activeTab = ref<'providers' | 'params' | 'prompts'>('providers')
 
 const providerMgmt = useProviderManagement()
 const modelMgmt = useModelManagement()
 const modelTesting = useModelTesting()
 const promptRules = usePromptRules()
+const showGithubLink = computed(() => authStore.user?.auth_type !== 'feishu')
 
 watch(activeTab, (newTab) => {
   if (newTab === 'prompts') {

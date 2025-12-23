@@ -1,7 +1,7 @@
 """
 认证服务类
 处理用户认证相关的业务逻辑
-支持: Linux.do OAuth + 本地用户名密码认证
+支持: Linux.do OAuth + 飞书 OAuth + 本地用户名密码认证
 """
 import datetime
 from sanic.log import logger
@@ -63,6 +63,7 @@ class AuthService:
                         name = ?,
                         linux_do_username = ?,
                         avatar = ?,
+                        auth_type = 'linux_do',
                         last_login_time = ?
                     WHERE linux_do_id = ?
                 """
@@ -93,6 +94,65 @@ class AuthService:
                 
         except Exception as e:
             logger.error(f'❌ 创建或更新Linux.do用户失败: {e}')
+            raise
+
+    async def create_or_update_user_from_feishu(self, user_info):
+        """
+        从飞书用户信息创建或更新用户
+        """
+        feishu_open_id = user_info.get('open_id')
+        
+        if not feishu_open_id:
+            raise ValueError('用户信息中缺少open_id')
+        
+        try:
+            sql = "SELECT * FROM users WHERE feishu_open_id = ?"
+            user = await self.db.get(sql, [feishu_open_id])
+            
+            current_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            avatar = user_info.get('avatar_640') or user_info.get('avatar_240') or user_info.get('avatar_72') or ''
+            name = user_info.get('name') or '飞书用户'
+            email = user_info.get('email') or user_info.get('enterprise_email', '')
+            feishu_union_id = user_info.get('union_id') or ''
+            
+            if user:
+                update_sql = """
+                    UPDATE users SET
+                        name = ?,
+                        avatar = ?,
+                        email = ?,
+                        feishu_union_id = ?,
+                        auth_type = 'feishu',
+                        last_login_time = ?
+                    WHERE feishu_open_id = ?
+                """
+                await self.db.execute(update_sql, [
+                    name,
+                    avatar,
+                    email,
+                    feishu_union_id,
+                    current_time,
+                    feishu_open_id
+                ])
+                
+                sql = "SELECT * FROM users WHERE feishu_open_id = ?"
+                return await self.db.get(sql, [feishu_open_id])
+            else:
+                fields = {
+                    'feishu_open_id': feishu_open_id,
+                    'feishu_union_id': feishu_union_id,
+                    'name': name,
+                    'avatar': avatar,
+                    'email': email,
+                    'auth_type': 'feishu',
+                    'is_active': 1,
+                    'last_login_time': current_time
+                }
+                
+                user_id = await self.db.table_insert('users', fields)
+                return await self.get_user_by_id(user_id)
+        except Exception as e:
+            logger.error(f'❌ 创建或更新飞书用户失败: {e}')
             raise
     
     async def get_user_by_id(self, user_id):
@@ -246,6 +306,17 @@ class AuthService:
         except Exception as e:
             logger.error(f'❌ 查询用户失败: {e}')
             raise
+
+    async def get_user_by_feishu_open_id(self, feishu_open_id):
+        """
+        根据飞书open_id获取用户
+        """
+        try:
+            sql = "SELECT * FROM users WHERE feishu_open_id = ?"
+            return await self.db.get(sql, [feishu_open_id])
+        except Exception as e:
+            logger.error(f'❌ 查询飞书用户失败: {e}')
+            raise
     
     async def update_last_login_time(self, user_id):
         """
@@ -292,4 +363,3 @@ class AuthService:
         except Exception as e:
             logger.error(f'❌ 激活用户失败: {e}')
             raise
-

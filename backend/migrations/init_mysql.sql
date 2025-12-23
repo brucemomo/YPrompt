@@ -1,6 +1,6 @@
 -- ==========================================
 -- YPrompt MySQL 数据库初始化脚本
--- 支持双认证: Linux.do OAuth + 本地用户名密码
+-- 支持多认证: Linux.do OAuth + 飞书 OAuth + 本地用户名密码
 -- ==========================================
 
 SET NAMES utf8mb4;
@@ -16,6 +16,10 @@ CREATE TABLE `users` (
   -- Linux.do OAuth字段
   `linux_do_id` VARCHAR(64) DEFAULT NULL,
   `linux_do_username` VARCHAR(100) DEFAULT NULL,
+  
+  -- 飞书 OAuth字段
+  `feishu_open_id` VARCHAR(64) DEFAULT NULL,
+  `feishu_union_id` VARCHAR(64) DEFAULT NULL,
   
   -- 本地认证字段
   `username` VARCHAR(50) DEFAULT NULL,
@@ -35,6 +39,7 @@ CREATE TABLE `users` (
   
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_linux_do_id` (`linux_do_id`),
+  UNIQUE KEY `uk_feishu_open_id` (`feishu_open_id`),
   UNIQUE KEY `uk_username` (`username`),
   KEY `idx_auth_type` (`auth_type`),
   KEY `idx_is_active` (`is_active`)

@@ -6,12 +6,17 @@ class BaseConfig(object):
     DEBUG = True
 
     # JWT秘钥
-    SECRET_KEY = 'intramirror'
+    SECRET_KEY = 'yprompt-secret-key-change-in-production'
     
     # Linux.do OAuth配置
     LINUX_DO_CLIENT_ID = ''
     LINUX_DO_CLIENT_SECRET = ''
     LINUX_DO_REDIRECT_URI = ''
+
+    # 飞书 OAuth 配置
+    FEISHU_APP_ID = ''
+    FEISHU_APP_SECRET = ''
+    FEISHU_REDIRECT_URI = ''
     
     # ==========================================
     # 数据库配置
@@ -90,37 +95,6 @@ class BaseConfig(object):
                 'formatter': 'default',
             },
         },
-    }
-
-    # 告警源和派生表映射关系
-    S2T = {
-        "apm": "apm",
-        "rum": "rum",
-        "ckafka": "mid",
-        "mongodb": "mid",
-        "redis": "mid",
-        "cdb": "mid",
-        "es": "mid",
-        "cvm": "iaas",
-        "ecs": "iaas",
-        "cos": "iaas",
-        "cls": "iaas",
-        "sls": "iaas",
-        "custom": "custom"
-    }
-
-    # 没有对应的分派策略的默认owner
-    OWNER_DEFAULT = [{
-        'workforceType': 4,
-        'watchkeeperId': 833,
-        'watchkeeperName': '朱威',
-        'dingDingId': 4311207311543872874
-    }]
-    ARGS_DEFAULT = {
-    'status': 0,
-    'dingtalk_person': 0,
-    'sms': 0,
-    'dingtalk_group': 0
     }
 
 

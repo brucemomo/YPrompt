@@ -29,6 +29,10 @@ services:
       - LINUX_DO_CLIENT_ID=
       - LINUX_DO_CLIENT_SECRET=
       - LINUX_DO_REDIRECT_URI=http://localhost/auth/callback
+      # 飞书 OAuth（可选）
+      - FEISHU_APP_ID=
+      - FEISHU_APP_SECRET=
+      - FEISHU_REDIRECT_URI=http://localhost/auth/callback
 
       # 默认管理员账号（首次启动后建议立即修改）
       - ADMIN_USERNAME=admin

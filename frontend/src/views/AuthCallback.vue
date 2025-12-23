@@ -3,7 +3,7 @@
     <div class="callback-card">
       <div v-if="isProcessing" class="processing-state">
         <div class="loading-spinner"></div>
-        <p class="status-text">正在处理登录...</p>
+        <p class="status-text">正在处理 {{ providerLabel }} 登录...</p>
       </div>
 
       <div v-else-if="error" class="error-state">
@@ -20,7 +20,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -30,9 +30,33 @@ const authStore = useAuthStore()
 
 const isProcessing = ref(true)
 const error = ref('')
+const provider = ref<'linux_do' | 'feishu'>('linux_do')
+const providerLabel = computed(() => provider.value === 'feishu' ? '飞书' : 'Linux.do')
+
+const getQueryValue = (value: string | string[] | undefined) => {
+  if (Array.isArray(value)) return value[0]
+  return value
+}
+
+const resolveProvider = () => {
+  const providerHint = getQueryValue(route.query.provider) || getQueryValue(route.query.state)
+  if (providerHint && providerHint.toLowerCase().includes('feishu')) {
+    return 'feishu'
+  }
+  return 'linux_do'
+}
 
 const processCallback = async () => {
   try {
+    provider.value = resolveProvider()
+    
+    const oauthError = getQueryValue(route.query.error) || getQueryValue(route.query.error_description)
+    if (oauthError) {
+      error.value = decodeURIComponent(oauthError)
+      isProcessing.value = false
+      return
+    }
+
     const code = route.query.code as string
 
     if (!code) {
@@ -41,8 +65,12 @@ const processCallback = async () => {
       return
     }
 
-    // 使用 Linux.do OAuth 登录
-    const success = await authStore.loginWithLinuxDo(code)
+    let success = false
+    if (provider.value === 'feishu') {
+      success = await authStore.loginWithFeishu(code)
+    } else {
+      success = await authStore.loginWithLinuxDo(code)
+    }
 
     if (success) {
       // 登录成功，跳转到主页

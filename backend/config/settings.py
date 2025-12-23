@@ -22,6 +22,11 @@ class Config(BaseConfig):
     LINUX_DO_CLIENT_ID = os.getenv('LINUX_DO_CLIENT_ID') or (cf.LINUX_DO_CLIENT_ID if hasattr(cf, 'LINUX_DO_CLIENT_ID') else '')
     LINUX_DO_CLIENT_SECRET = os.getenv('LINUX_DO_CLIENT_SECRET') or (cf.LINUX_DO_CLIENT_SECRET if hasattr(cf, 'LINUX_DO_CLIENT_SECRET') else '')
     LINUX_DO_REDIRECT_URI = os.getenv('LINUX_DO_REDIRECT_URI') or (cf.LINUX_DO_REDIRECT_URI if hasattr(cf, 'LINUX_DO_REDIRECT_URI') else '')
+
+    # 飞书 OAuth 配置（优先使用环境变量）
+    FEISHU_APP_ID = os.getenv('FEISHU_APP_ID') or (cf.FEISHU_APP_ID if hasattr(cf, 'FEISHU_APP_ID') else '')
+    FEISHU_APP_SECRET = os.getenv('FEISHU_APP_SECRET') or (cf.FEISHU_APP_SECRET if hasattr(cf, 'FEISHU_APP_SECRET') else '')
+    FEISHU_REDIRECT_URI = os.getenv('FEISHU_REDIRECT_URI') or (cf.FEISHU_REDIRECT_URI if hasattr(cf, 'FEISHU_REDIRECT_URI') else '')
     
     # 默认管理员账号配置（优先使用环境变量）
     DEFAULT_ADMIN_USERNAME = os.getenv('ADMIN_USERNAME') or (cf.DEFAULT_ADMIN_USERNAME if hasattr(cf, 'DEFAULT_ADMIN_USERNAME') else 'admin')
@@ -34,4 +39,3 @@ class Config(BaseConfig):
         REGISTRATION_ENABLED = _registration_env.lower() in ('1', 'true', 'yes', 'on')
     else:
         REGISTRATION_ENABLED = cf.REGISTRATION_ENABLED if hasattr(cf, 'REGISTRATION_ENABLED') else False
-

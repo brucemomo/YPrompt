@@ -80,7 +80,7 @@ DEFAULT_ADMIN_NAME = '系统管理员'        # 自定义显示名称
 
 ## 认证方式
 
-系统支持双认证模式：
+系统支持多种认证模式：
 
 ### 1. Linux.do OAuth（可选）
 
@@ -94,9 +94,23 @@ LINUX_DO_REDIRECT_URI = 'http://localhost:5173/auth/callback'
 
 申请地址：https://linux.do
 
-### 2. 本地用户名密码（始终可用）
+### 2. 飞书 OAuth（可选）
+
+如果需要飞书 OAuth 登录，配置 `config/dev.py`：
+
+```python
+FEISHU_APP_ID = 'your_feishu_app_id'
+FEISHU_APP_SECRET = 'your_feishu_app_secret'
+FEISHU_REDIRECT_URI = 'http://localhost:5173/auth/callback'
+```
+
+飞书开放平台：https://open.feishu.cn
+
+### 3. 本地用户名密码（可选）
 
 适用于私有部署，无需外部 OAuth 服务。
+
+> 如果 `DEFAULT_ADMIN_USERNAME` 留空且未开放注册（`REGISTRATION_ENABLED=false`），前端将不会展示账号密码登录入口。
 
 ## 数据库配置详解
 
@@ -183,6 +197,7 @@ yprompt-backend/
 
 **认证相关**：
 - `POST /api/auth/linux-do/login` - Linux.do OAuth 登录
+- `POST /api/auth/feishu/login` - 飞书 OAuth 登录
 - `POST /api/auth/local/login` - 本地用户名密码登录
 - `POST /api/auth/local/register` - 注册本地用户
 - `POST /api/auth/refresh` - 刷新 Token
@@ -217,6 +232,8 @@ python run.py
 1. 更新 `migrations/init_database.sql` (MySQL)
 2. 更新 `migrations/init_sqlite.sql` (SQLite)
 3. 删除现有数据库重新初始化，或手动执行迁移语句
+
+> 新增飞书 OAuth 字段的手动迁移脚本已包含在 `migrations/add_feishu_auth_mysql.sql` 与 `migrations/add_feishu_auth_sqlite.sql` 中，可在升级旧版本数据库时执行。
 
 ### 切换数据库
 

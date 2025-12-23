@@ -8,19 +8,19 @@ from sanic_ext import openapi
 # 登录请求模型
 @openapi.component
 class LoginRequest:
-    code: str = openapi.String(description="飞书授权码", required=True)
+    code: str = openapi.String(description="OAuth 授权码", required=True)
 
 
 # 登录响应 - 用户信息
 @openapi.component
 class UserInfo:
     id: int = openapi.Integer(description="用户ID")
-    open_id: str = openapi.String(description="飞书open_id")
-    union_id: str = openapi.String(description="飞书union_id")
     name: str = openapi.String(description="用户姓名")
+    username: str = openapi.String(description="显示用户名")
     avatar: str = openapi.String(description="用户头像URL")
     email: str = openapi.String(description="用户邮箱")
-    mobile: str = openapi.String(description="用户手机号")
+    auth_type: str = openapi.String(description="认证类型")
+    is_admin: int = openapi.Integer(description="是否管理员")
     last_login_time: str = openapi.String(description="最后登录时间")
 
 
@@ -65,4 +65,3 @@ class SuccessResponse:
     code: int = openapi.Integer(description="状态码", default=200)
     message: str = openapi.String(description="响应消息")
     data: dict = openapi.Object(description="响应数据")
-

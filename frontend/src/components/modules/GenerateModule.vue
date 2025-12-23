@@ -1,7 +1,7 @@
 <template>
   <div class="h-full flex flex-col overflow-hidden p-2">
     <!-- 设置按钮 -->
-    <GenerateSettingsModal />
+    <SettingsModal />
 
     <div class="w-full flex flex-col flex-1 overflow-hidden">
       <!-- 模块特定顶栏 -->
@@ -111,7 +111,7 @@
 <script setup lang="ts">
 import ChatInterface from '@/components/ChatInterface.vue'
 import PreviewPanel from '@/components/PreviewPanel.vue'
-import GenerateSettingsModal from '@/components/GenerateSettingsModal.vue'
+import SettingsModal from '@/components/settings/SettingsModal.vue'
 import NotificationContainer from '@/components/NotificationContainer.vue'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { usePromptStore } from '@/stores/promptStore'

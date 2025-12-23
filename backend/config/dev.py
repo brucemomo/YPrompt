@@ -22,7 +22,7 @@ class Config:
     # ==========================================
     # JWT配置
     # ==========================================
-    SECRET_KEY = 'yprompt-dev-secret-key-change-in-production'
+    SECRET_KEY = 'yprompt-secret-key-change-in-production'
     
     # ==========================================
     # Linux.do OAuth配置 (可选)
@@ -34,17 +34,25 @@ class Config:
     LINUX_DO_REDIRECT_URI = 'http://localhost:5173/auth/callback'
 
     # ==========================================
+    # 飞书 OAuth 配置 (可选)
+    # ==========================================
+    # 申请地址: https://open.feishu.cn/
+    FEISHU_APP_ID = ''
+    FEISHU_APP_SECRET = ''
+    FEISHU_REDIRECT_URI = 'http://localhost:5173/auth/callback'
+
+    # ==========================================
     # 默认管理员账号配置
     # ==========================================
-    DEFAULT_ADMIN_USERNAME = 'admin'
-    DEFAULT_ADMIN_PASSWORD = 'admin123'
+    DEFAULT_ADMIN_USERNAME = ''
+    DEFAULT_ADMIN_PASSWORD = ''
     DEFAULT_ADMIN_NAME = '管理员'
     
     # ==========================================
     # 注册功能配置
     # ==========================================
     # 是否允许本地用户注册（Linux.do OAuth不受此影响）
-    REGISTRATION_ENABLED = True  # True=允许注册, False=禁止注册
+    REGISTRATION_ENABLED = False  # True=允许注册, False=禁止注册
     
     # ==========================================
     # 服务器配置

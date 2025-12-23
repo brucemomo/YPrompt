@@ -12,9 +12,21 @@ export interface User {
   name: string
   avatar: string
   email?: string
-  auth_type: 'linux_do' | 'local'
+  auth_type: 'linux_do' | 'local' | 'feishu'
   is_admin: number
   last_login_time?: string
+}
+
+export interface AuthConfig {
+  linux_do_enabled: boolean
+  linux_do_client_id: string
+  linux_do_redirect_uri: string
+  feishu_enabled: boolean
+  feishu_app_id: string
+  feishu_redirect_uri: string
+  feishu_authorize_url?: string
+  local_auth_enabled: boolean
+  registration_enabled: boolean
 }
 
 export const useAuthStore = defineStore('auth', () => {
@@ -24,13 +36,7 @@ export const useAuthStore = defineStore('auth', () => {
   const token = ref<string | null>(localStorage.getItem('yprompt_token'))
   const user = ref<User | null>(null)
   const isLoading = ref(false)
-  const authConfig = ref<{
-    linux_do_enabled: boolean
-    linux_do_client_id: string
-    linux_do_redirect_uri: string
-    local_auth_enabled: boolean
-    registration_enabled: boolean
-  } | null>(null)
+  const authConfig = ref<AuthConfig | null>(null)
   
   // 计算属性
   const isLoggedIn = computed(() => !!token.value && !!user.value)
@@ -74,13 +80,26 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
   
-  /**
-   * 通过Linux.do OAuth code登录
-   */
-  const loginWithLinuxDo = async (code: string): Promise<boolean> => {
+  const handleLoginSuccess = async (data: { token: string; user: User }) => {
+    setToken(data.token)
+    setUser(data.user)
+    
+    try {
+      const { promptConfigManager } = await import('@/config/prompts')
+      await promptConfigManager.forceReloadFromCloud()
+      
+      const { useSettingsStore } = await import('@/stores/settingsStore')
+      const settingsStore = useSettingsStore()
+      await settingsStore.forceReloadFromCloud()
+    } catch (error) {
+      console.error('登录后加载云端配置失败:', error)
+    }
+  }
+  
+  const performOAuthLogin = async (endpoint: string, code: string): Promise<boolean> => {
     isLoading.value = true
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/auth/linux-do/login`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || ''}${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -89,35 +108,27 @@ export const useAuthStore = defineStore('auth', () => {
       })
       
       const result = await response.json()
-      
       if (result.code === 200 && result.data) {
-        setToken(result.data.token)
-        setUser(result.data.user)
-        
-        // 登录成功后，强制重新加载云端配置
-        try {
-          // 1. 重新加载提示词规则
-          const { promptConfigManager } = await import('@/config/prompts')
-          await promptConfigManager.forceReloadFromCloud()
-          
-          // 2. 重新加载AI配置
-          const { useSettingsStore } = await import('@/stores/settingsStore')
-          const settingsStore = useSettingsStore()
-          await settingsStore.forceReloadFromCloud()
-        } catch (error) {
-          console.error('登录后加载云端配置失败:', error)
-        }
-        
+        await handleLoginSuccess(result.data)
         return true
-      } else {
-        return false
       }
+      return false
     } catch (error) {
       return false
     } finally {
       isLoading.value = false
     }
   }
+  
+  /**
+   * 通过Linux.do OAuth code登录
+   */
+  const loginWithLinuxDo = (code: string) => performOAuthLogin('/api/auth/linux-do/login', code)
+  
+  /**
+   * 通过飞书 OAuth code 登录
+   */
+  const loginWithFeishu = (code: string) => performOAuthLogin('/api/auth/feishu/login', code)
   
   /**
    * 本地用户名密码登录
@@ -136,23 +147,7 @@ export const useAuthStore = defineStore('auth', () => {
       const result = await response.json()
       
       if (result.code === 200 && result.data) {
-        setToken(result.data.token)
-        setUser(result.data.user)
-        
-        // 登录成功后，强制重新加载云端配置
-        try {
-          // 1. 重新加载提示词规则
-          const { promptConfigManager } = await import('@/config/prompts')
-          await promptConfigManager.forceReloadFromCloud()
-          
-          // 2. 重新加载AI配置
-          const { useSettingsStore } = await import('@/stores/settingsStore')
-          const settingsStore = useSettingsStore()
-          await settingsStore.forceReloadFromCloud()
-        } catch (error) {
-          console.error('登录后加载云端配置失败:', error)
-        }
-        
+        await handleLoginSuccess(result.data)
         return true
       } else {
         return false
@@ -211,13 +206,7 @@ export const useAuthStore = defineStore('auth', () => {
   /**
    * 获取认证配置（兼容旧方法名）
    */
-  const getAuthConfig = async (): Promise<{
-    linux_do_enabled: boolean
-    linux_do_client_id: string
-    linux_do_redirect_uri: string
-    local_auth_enabled: boolean
-    registration_enabled: boolean
-  } | null> => {
+  const getAuthConfig = async (): Promise<AuthConfig | null> => {
     if (!authConfig.value) {
       await fetchAuthConfig()
     }
@@ -364,6 +353,7 @@ export const useAuthStore = defineStore('auth', () => {
     setToken,
     setUser,
     loginWithLinuxDo,
+    loginWithFeishu,
     loginWithPassword,
     register,
     getAuthConfig,
@@ -374,4 +364,3 @@ export const useAuthStore = defineStore('auth', () => {
     initialize,
   }
 })
-

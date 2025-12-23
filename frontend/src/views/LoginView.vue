@@ -15,15 +15,26 @@
 
       <!-- 登录表单 -->
       <div v-else class="login-content">
-        <!-- Linux.do OAuth 登录 -->
-        <div v-if="authConfig.linux_do_enabled" class="login-section">
-          <button @click="loginWithLinuxDo" class="btn btn-primary btn-linux-do">
+        <!-- OAuth 登录 -->
+        <div v-if="hasOAuthProvider" class="login-section oauth-section">
+          <button
+            v-if="authConfig.linux_do_enabled"
+            @click="loginWithLinuxDo"
+            class="btn btn-primary btn-linux-do"
+          >
             使用 Linux.do 登录
+          </button>
+          <button
+            v-if="authConfig.feishu_enabled"
+            @click="loginWithFeishu"
+            class="btn btn-feishu"
+          >
+            使用飞书登录
           </button>
         </div>
 
-        <!-- 分隔线（当两种认证方式都存在时显示） -->
-        <div v-if="authConfig.linux_do_enabled && authConfig.local_auth_enabled" class="divider">
+        <!-- 分隔线（OAuth + 本地） -->
+        <div v-if="hasOAuthProvider && authConfig.local_auth_enabled" class="divider">
           <span>或</span>
         </div>
 
@@ -149,18 +160,24 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/authStore'
+import { useAuthStore, type AuthConfig } from '@/stores/authStore'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const DEFAULT_FEISHU_AUTH_URL = 'https://accounts.feishu.cn/open-apis/authen/v1/authorize'
+const FEISHU_SCOPE = 'contact:contact.base:readonly'
 
 // 认证配置
-const authConfig = ref({
+const authConfig = ref<AuthConfig>({
   linux_do_enabled: false,
   linux_do_client_id: '',
   linux_do_redirect_uri: '',
+  feishu_enabled: false,
+  feishu_app_id: '',
+  feishu_redirect_uri: '',
+  feishu_authorize_url: DEFAULT_FEISHU_AUTH_URL,
   local_auth_enabled: true,
   registration_enabled: false
 })
@@ -182,13 +199,18 @@ const isLoading = ref(true)
 const isSubmitting = ref(false)
 const errorMessage = ref('')
 const showRegister = ref(false)
+const hasOAuthProvider = computed(() => authConfig.value.linux_do_enabled || authConfig.value.feishu_enabled)
 
 // 获取认证配置
 const fetchAuthConfig = async () => {
   try {
     const config = await authStore.getAuthConfig()
     if (config) {
-      authConfig.value = config
+      authConfig.value = {
+        ...authConfig.value,
+        ...config,
+        feishu_authorize_url: config.feishu_authorize_url || DEFAULT_FEISHU_AUTH_URL
+      }
       if (!config.registration_enabled) {
         showRegister.value = false
       }
@@ -207,10 +229,39 @@ const loginWithLinuxDo = () => {
     return
   }
 
-  // 使用后端返回的配置构建授权URL
-  const authUrl = `https://connect.linux.do/oauth2/authorize?client_id=${authConfig.value.linux_do_client_id}&redirect_uri=${authConfig.value.linux_do_redirect_uri}&response_type=code&scope=user`
+  const params = new URLSearchParams({
+    client_id: authConfig.value.linux_do_client_id,
+    redirect_uri: authConfig.value.linux_do_redirect_uri,
+    response_type: 'code',
+    scope: 'user',
+    state: 'linux_do'
+  })
   
-  window.location.href = authUrl
+  window.location.href = `https://connect.linux.do/oauth2/authorize?${params.toString()}`
+}
+
+// 飞书 OAuth 登录
+const loginWithFeishu = () => {
+  if (!authConfig.value.feishu_enabled) {
+    errorMessage.value = '飞书 OAuth 未配置'
+    return
+  }
+
+  if (!authConfig.value.feishu_app_id || !authConfig.value.feishu_redirect_uri) {
+    errorMessage.value = '飞书 OAuth 配置不完整'
+    return
+  }
+
+  const params = new URLSearchParams({
+    app_id: authConfig.value.feishu_app_id,
+    redirect_uri: authConfig.value.feishu_redirect_uri,
+    response_type: 'code',
+    scope: FEISHU_SCOPE,
+    state: 'feishu'
+  })
+
+  const authorizeUrl = authConfig.value.feishu_authorize_url || DEFAULT_FEISHU_AUTH_URL
+  window.location.href = `${authorizeUrl}?${params.toString()}`
 }
 
 // 本地账号密码登录
@@ -432,8 +483,43 @@ onMounted(() => {
   background: #5a67d8;
 }
 
-.btn-linux-do {
+.oauth-section .btn {
   width: 100%;
+  margin-bottom: 12px;
+}
+
+.oauth-section .btn:last-child {
+  margin-bottom: 0;
+}
+
+.btn-linux-do {
+  background: linear-gradient(135deg, #00c6ff 0%, #0072ff 100%);
+  color: #fff;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn-linux-do:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 15px 30px rgba(0, 114, 255, 0.2);
+}
+
+.btn-feishu {
+  background: linear-gradient(135deg, #5c7cfa 0%, #3b5bff 100%);
+  color: #fff;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn-feishu:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 15px 30px rgba(59, 91, 255, 0.2);
 }
 
 .btn-block {

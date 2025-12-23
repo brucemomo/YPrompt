@@ -30,6 +30,16 @@ echo "- 日志目录: ${LOG_PATH}"
 echo "- 健康检查间隔: ${HEALTH_CHECK_INTERVAL}秒"
 echo "- 管理员用户名: ${ADMIN_USERNAME}"
 echo "- 开放用户注册: ${REGISTRATION_ENABLED}"
+if [ -n "${LINUX_DO_CLIENT_ID:-}" ]; then
+    echo "- Linux.do OAuth: 已配置"
+else
+    echo "- Linux.do OAuth: 未配置"
+fi
+if [ -n "${FEISHU_APP_ID:-}" ]; then
+    echo "- 飞书 OAuth: 已配置"
+else
+    echo "- 飞书 OAuth: 未配置"
+fi
 echo "========================================"
 
 # 创建必要的目录（统一在/app/data下）

@@ -18,6 +18,14 @@ ENV ADMIN_USERNAME=admin
 ENV ADMIN_PASSWORD=admin123
 ENV REGISTRATION_ENABLED=false
 
+# OAuth 配置
+ENV LINUX_DO_CLIENT_ID=""
+ENV LINUX_DO_CLIENT_SECRET=""
+ENV LINUX_DO_REDIRECT_URI="http://localhost/auth/callback"
+ENV FEISHU_APP_ID=""
+ENV FEISHU_APP_SECRET=""
+ENV FEISHU_REDIRECT_URI="http://localhost/auth/callback"
+
 # 数据目录统一配置（所有持久化数据都在/app/data下）
 ENV CACHE_PATH=/app/data/cache
 ENV LOG_PATH=/app/data/logs
