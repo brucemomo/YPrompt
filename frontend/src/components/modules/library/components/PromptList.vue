@@ -30,11 +30,11 @@
       </div>
 
       <!-- 提示词卡片列表 -->
-      <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div v-else class="grid grid-cols-1 md:grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4 md:gap-6">
         <div
           v-for="prompt in prompts"
           :key="prompt.id"
-          class="bg-white border border-gray-200 rounded-lg p-5 hover:shadow-md transition-shadow cursor-pointer flex flex-col"
+          class="bg-white border border-gray-200 rounded-lg p-5 hover:shadow-md transition-shadow cursor-pointer flex flex-col "
           style="min-height: 280px;"
           @click="handleViewPrompt(prompt)"
         >
